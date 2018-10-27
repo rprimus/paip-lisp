@@ -1,4 +1,4 @@
-# Chapter 3 {docsify-ignore}
+# Chapter 3
 ## Overview of Lisp
 
 > No doubt about it.
@@ -44,15 +44,14 @@ These can be used to implement specific data structures that your program will u
 If you define a list of names:
 
 ```lisp
-(defvar *names* '((Robert E.
-Lee) ...))
+(defvar *names* '((Robert E. Lee) ...))
 ```
 
 then you should also define functions to get at the components of each name.
 To get at `Lee`, use `(last-name (first *names*))`, not `(caddar *names*)`.
 
 Often the maxims are in concord.
-For example, if your code is trying to find an element in a list, you should use `find` (or maybe `find- if`), not `loop` or `do`.
+For example, if your code is trying to find an element in a list, you should use `find` (or maybe `find-if`), not `loop` or `do`.
 `find` is more specific than the general constructs `loop` or `do,` it is an abstraction, it is more concise, it is a built-in tool, and it is simple to understand.
 
 Sometimes, however, the maxims are in conflict, and experience will tell you which one to prefer.
@@ -429,7 +428,7 @@ This use is unusual in that the loop iteration variable, `element`, is not used 
 ```
 
 It is also possible to use the optional result of `dolist`, as shown below.
-While many programmers use this style, I find that it is too easy to lose track of the result, and so I prefer to place the result last explictly.
+While many programmers use this style, I find that it is too easy to lose track of the result, and so I prefer to place the result last explicitly.
 
 ```lisp
 (defun length1.1 (list)         ; alternate version:
@@ -480,7 +479,8 @@ Rather, it is treated as if it had been bound with a `let` form.
 
 Here is `length` implemented with `do`, using two variables, `len` to count the number of elements, and `l` to go down the list.
 This is often referred to as *cdr-ing down a list,* because on each operation we apply the function `cdr` to the list.
-(Actually, here we have used the more mnemonic name `rest` instead of `cdr`.) Note that the `do` loop has no body!
+(Actually, here we have used the more mnemonic name `rest` instead of `cdr`.)
+Note that the `do` loop has no body!
 All the computation is done in the variable initialization and stepping, and in the end test.
 
 ```lisp
@@ -556,7 +556,7 @@ Admittedly, this is not the most straightforward implementation of `length.`
 A partial table of functions that implement looping idioms is given below.
 These functions are designed to be flexible enough to handle almost all operations on sequences.
 The flexibility comes in three forms.
-First, functions like mapcar can apply to an arbitrary number of lists, not just one:
+First, functions like `mapcar` can apply to an arbitrary number of lists, not just one:
 
 ```lisp
 > (mapcar #'- '(1 2 3)) => (-1 -2 -3)
@@ -611,7 +611,7 @@ The second table lists functions that have `-if` and `-if-not` versions and also
 | `(delete 1 y)` | => `(2 3)` | omit matching elements |
 | `(find 2 y)` | => `2` | find first element that matches |
 | `(position 'a x)` | => 0 | find index of element in sequence |
-| `(reduce #'+ y)` | => `6` | apply function to succesive elements |
+| `(reduce #'+ y)` | => `6` | apply function to successive elements |
 | `(remove 2 y)` | => (1 `3)` | like `delete`, but makes a new copy |
 | `(substitute 4 2 y)` | => `(1 4 3)` | replace elements with new ones |
 
@@ -629,7 +629,7 @@ This translates directly into a recursive function:
       (+ 1 (length9 (rest list)))))
 ```
 
-This version of `length` arises naturally from the recursive definition of a list: "a list is either the empty list or an element consed onto another list."
+This version of `length` arises naturally from the recursive definition of a list: "a list is either the empty list or an element `cons`ed onto another list."
 In general, most recursive functions derive from the recursive nature of the data they are operating on.
 Some kinds of data, like binary trees, are hard to deal with in anything but a recursive fashion.
 Others, like lists and integers, can be defined either recursively (leading to recursive functions) or as a sequence (leading to iterative functions).
@@ -779,14 +779,11 @@ Common Lisp provides a number of built-in macros and allows the user to extend t
 
 Macros are defined with the special form `defmacro`.
 Suppose we wanted to define a macro, `while`, that would act like the `while` loop statement of Pascal.
-Writing a macro is a four-step process:[ ](#){:#p1240}
+Writing a macro is a four-step process:
 
 * Decide if the macro is really necessary.
-
 * Write down the syntax of the macro.
-
 * Figure out what the macro should expand into.
-
 * Use `defmacro` to implement the syntax/expansion correspondence.
 
 The first step in writing a macro is to recognize that every time you write one, you are defining a new language that is just like Lisp except for your new macro.
@@ -1190,7 +1187,7 @@ The name `sublis` is uncharacteristically short and confusing; a better name wou
 
 > (sublis '((old . new)) '(old ((very old))))` => `(NEW ((VERY NEW)))
 
-> (subst 'new 'old 'old) => 'NEW`  
+> (subst 'new 'old 'old) => 'NEW`
 
 (defun english->french (words)
   (sublis '((are . va) (book . libre) (friend . ami)
@@ -1239,7 +1236,7 @@ For example, to see what elements the sets *r* = {*a, b, c, d*} and *s* = {*c, d
 ```
 
 This implementation returned (`C D`) as the answer, but another might return (`D C`).
-They are equivalent sets, so either is valid, and your program should not depend on the order of elements in the result .
+They are equivalent sets, so either is valid, and your program should not depend on the order of elements in the result.
 Here are the main functions on sets:
 
 | []() | | |
@@ -1318,7 +1315,7 @@ He or she must be aware that the first argument may be altered, and plan accordi
 This is far more complicated than the case with nondestructive functions, where the programmer need worry only about the results of a function call.
 
 The advantage of `nconc` is that it doesn't use any storage.
-While `append` must make a complete copy of `x` and then have that copy end with `y,` `nconc` does not need to copy anything.
+While `append` must make a complete copy of `x` and then have that copy end with `y`, `nconc` does not need to copy anything.
 Instead, it just changes the rest field of the last element of `x` to point to `y.`
 So use destructive functions when you need to conserve storage, but be aware of the consequences.
 
@@ -1408,7 +1405,7 @@ The following table shows a number of more specialized data types that are not u
 | Type | Example | Explanation |
 |---|---|---|
 | `t` | `42` | Every object is of type `t.` |
-| `nil` | | No object is of type `nil.` |
+| `nil` | | No object is of type `nil`. |
 | `complex` | `#C(0 1)` | Imaginary numbers. |
 | `bit` | `0` | Zero or one. |
 | `rational` | `2/3` | Rationals include integers and ratios. |
@@ -1530,8 +1527,7 @@ You need not rely solely on looking at the source code.
 We have already seen how `trace` and `untrace` can be used to provide debugging information (page 65).
 Another useful tool is `step`, which can be used to halt execution before each subform is evaluated.
 The form (`step` *expression*) will evaluate and return *expression*, but pauses at certain points to allow the user to inspect the computation, and possibly change things before proceeding to the next step.
-The commands available to the user are implementation-dependent, but typing a `?`
-should give you a list of commands.
+The commands available to the user are implementation-dependent, but typing a `?` should give you a list of commands.
 As an example, here we step through an expression twice, the first time giving commands to stop at each subevaluation, and the second time giving commands to skip to the next function call.
 In this implementation, the commands are control characters, so they do not show up in the output.
 
@@ -1730,7 +1726,7 @@ The assertion tests that the temperature of the bear's porridge is neither too h
 ```
 
 In the interaction below, the assertion failed, and the programmer's error message was printed, along with two possibilities for continuing.
-The user selected one, typed in a call to `make-porridge` for the new value, and the function succesfully continued.
+The user selected one, typed in a call to `make-porridge` for the new value, and the function successfully continued.
 
 ```lisp
 > (eat-porridge momma-bear)
@@ -1790,7 +1786,7 @@ Most serious Common Lisp programmers work exclusively with compiled functions.
 However, it is usually a bad idea to worry too much about efficiency details while starting to develop a program.
 It is better to design a flexible program, get it to work, and then modify the most frequently used parts to be more efficient.
 In other words, separate the development stage from the fine-tuning stage.
-Chapters 9 and 10 give more details on efficiency consideration, and [chapter 25](chapter25.md) gives more advice on debugging and antibugging techniques.
+[Chapters 9](chapter9.md) and [10](chapter10.md) give more details on efficiency consideration, and [chapter 25](chapter25.md) gives more advice on debugging and antibugging techniques.
 
 ## 3.15 Evaluation
 
@@ -1962,7 +1958,7 @@ Special variables set up a mapping between symbols and values that is accessible
 This is unlike lexical variables (and all variables in traditional languages) where symbols (identifiers) have significance only while the program is being compiled.
 Once the program is running, the identifiers have been compiled away and cannot be used to access the variables; only code that appears within the scope of a lexical variable can reference that variable.
 
-&#9635; **Exercise 3.6 [s]** Given the following initialization for the lexical variable a and the special variable `*b*`, what will be the value of the `let` form?
+&#9635; **Exercise 3.6 [s]** Given the following initialization for the lexical variable `a` and the special variable `*b*`, what will be the value of the `let` form?
 
 ```lisp
 (setf a 'global-a)
@@ -2083,7 +2079,7 @@ For example, in `math-quiz` we can arrange to make `+` be the default operator, 
     (problem (random range) op (random range))))
 ```
 
-Now `(math-quiz`) means the same as (`math-quiz '+ 100 10`).
+Now (`math-quiz`) means the same as (`math-quiz '+ 100 10`).
 If an optional parameter appears alone without a default value, then the default is `nil`.
 Optional parameters are handy; however, what if the user is happy with the operator and range but wants to change the number of iterations?
 Optional parameters are still position-dependent, so the only solution is to type in all three arguments: (`math-quiz '+ 100 5`).
@@ -2124,20 +2120,23 @@ Consider these annotated examples:
 `> &optional =>`        *; lambda-list keywords are normal symbols  
 Error: the symbol &optional has no value*
 
-`> '&optional => &OPTIONAL`
-
+```lisp
+> '&optional => &OPTIONAL
+```
 `> (defun f (&xyz) (+ &xyz &xyz)) F` *;& has no significance*
 
-`> (f 3) => 6`
-
-`> (defun f (:xyz) (+ :xyz :xyz)) =>`
+```lisp
+> (f 3) => 6
+> (defun f (:xyz) (+ :xyz :xyz)) =>
+```
 *Error: the keyword :xyz appears in a variable list.  
 Keywords are constants, and so cannot be used as names of variables.*
 
-`> (defun g (&key x y) (list x y)) => G`
-
+```lisp
+> (defun g (&key x y) (list x y)) => G
 ```
-> (let ((key s '(:x :y :z)))      
+```
+> (let ((key s '(:x :y :z)))
    (g (second keys) 1 (first keys) 2)) => (2 1)
 ```
 *; keyword args can be computed*
@@ -2186,9 +2185,10 @@ By default, each tests if some item is `eql` to one or more of a series of other
 This test can be changed by supplying some other predicate as the argument to `:test`, or it can be reversed by specifying `:test-not.`
 In addition, the comparison can be made against some part of the object rather than the whole object by specifying a selector function as the `:key` argument.
 
-The sequence functions include `remove`, `remove-if`, `position,` and `find`. The most common type of sequence is the list, but strings and vectors can also be used as sequences.
+The sequence functions include `remove`, `remove-if`, `position,` and `find`.
+The most common type of sequence is the list, but strings and vectors can also be used as sequences.
 A sequence function performs some action repeatedly for some elements of a sequence.
-The default is to go through the sequence from beginning to end, but the reverse order can be specified with `:from-end t,` and a subsequence can be specifed by supplying a number for the `:start` or `:end` keyword.
+The default is to go through the sequence from beginning to end, but the reverse order can be specified with `:from-end t` and a subsequence can be specifed by supplying a number for the `:start` or `:end` keyword.
 The first element of a sequence is numbered 0, not 1, so be careful.
 
 As an example of keyword parameters, suppose we wanted to write sequence functions that are similar to `find` and `find-if`, except that they return a list of all matching elements rather than just the first matching element.
@@ -2450,7 +2450,7 @@ or, with an ANSI-compliant Common Lisp, you can specify a `:` key
 ----------------------
 
 <a id="fn03-1"></a>
-[[1]](#tfn03-1) Association lists are covered in [section 3.6](#s0080).
+[[1]](#tfn03-1) Association lists are covered in section 3.6.
 
 <a id="fn03-2"></a>
 [[2]](#tfn03-2) In mathematics, a function must associate a unique output value with each input value.
