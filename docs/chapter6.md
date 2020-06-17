@@ -5,12 +5,10 @@
 
 > -Thomas Carlyle (1795-1881)
 
-In [chapters 4](B9780080571157500042.xhtml) and [5](B9780080571157500054.xhtml) we were concerned with building two particular programs, GPS !!!(span) {:.smallcaps} and ELIZA !!!(span) {:.smallcaps} In this chapter, we will reexamine those two programs to discover some common patterns.
+In [chapters 4](B9780080571157500042.xhtml) and [5](B9780080571157500054.xhtml) we were concerned with building two particular programs, GPS and ELIZA. In this chapter, we will reexamine those two programs to discover some common patterns.
 Those patterns will be abstracted out to form reusable software tools that will prove helpful in subsequent chapters.
 
 ## 6.1 An Interactive Interpreter Tool
-{:#s0010}
-{:.h1hd}
 
 The structure of the function `eliza` is a common one.
 It is repeated below:
@@ -19,7 +17,7 @@ It is repeated below:
 (defun eliza ()
   "Respond to user input using pattern matching rules."
   (loop
-    (print 'eliza  >)
+    (print 'eliza>)
     (print (flatten (use-eliza-rules (read))))))
 ```
 
@@ -44,11 +42,11 @@ It may seem facetious to say those four symbols and eight parentheses constitute
 When we write that line, have we really accomplished anything?
 One answer to that question is to consider what we would have to do to write a Lisp (or Pascal) interpreter in Pascal.
 We would need a lexical analyzer and a symbol table manager.
-This is a considerable amount of work, but it is all handled by read.
+This is a considerable amount of work, but it is all handled by `read`.
 We would need a syntactic parser to assemble the lexical tokens into statements.
-read also handles this, but only because Lisp statements have trivial syntax: the syntax of lists and atoms.
-Thus read serves fine as a syntactic parser for Lisp, but would fail for Pascal.
-Next, we need the evaluation or interpretation part of the interpreter; eval does this nicely, and could handle Pascal just as well if we parsed Pascal syntax into Lisp expressions, `print` does much less work than `read` or `eval`, but is still quite handy.
+`read` also handles this, but only because Lisp statements have trivial syntax: the syntax of lists and atoms.
+Thus `read` serves fine as a syntactic parser for Lisp, but would fail for Pascal.
+Next, we need the evaluation or interpretation part of the interpreter; `eval` does this nicely, and could handle Pascal just as well if we parsed Pascal syntax into Lisp expressions, `print` does much less work than `read` or `eval`, but is still quite handy.
 
 The important point is not whether one line of code can be considered an implementation of Lisp; it is to recognize common patterns of computation.
 Both `eliza` and `lisp` can be seen as interactive interpreters that read some input, transform or evaluate the input in some way, print the result, and then go back for more input.
@@ -82,8 +80,9 @@ This function could then be used in writing each new interpreter:
 ```lisp
 (defun lisp ()
   (interactive-interpreter '> #'eval))
+  
 (defun eliza ()
-  (interactive-interpreter 'eliza  >
+  (interactive-interpreter 'eliza>
     #'(lambda (x) (flatten (use-eliza-rules x)))))
 ```
 
@@ -93,8 +92,9 @@ Or, with the help of the higher-order function compose:
 (defun compose (f g)
   "Return the function that computes (f (g x))."
   #'(lambda (x) (funcall f (funcall g x))))
+  
 (defun eliza ()
-  (interactive-interpreter 'eliza  >
+  (interactive-interpreter 'eliza>
     (compose #'flatten #'use-eliza-rules)))
 ```
 
@@ -122,33 +122,27 @@ The function `prompt-generator`, for example, returns a function that will print
 
 ```lisp
 (defun interactive-interpreter (prompt transformer)
-  "Read an expression, transform it, and print the result."
-  (loop
-    (handler-case
-      (progn
-        (if (stringp prompt)
-          (print prompt)
-          (funcall prompt))
-        (print (funcall transformer (read))))
-```
-
-`      ;; In case of error.
-do this:`
-
-```lisp
-      (error (condition)
-        (format t "~&;; Error ~a ignored, back to top level."
-          condition)))))
+   "Read an expression, transform it, and print the result."
+   (loop
+      (handler-case
+	  (progn
+	    (if (stringp prompt)
+		(print prompt)
+		(funcall prompt))
+	    (print (funcall transformer (read))))
+	;; In case of error, do this:
+	(error (condition)
+	  (format t "~&;; Error ~a ignored, back to top level."
+		  condition)))))
+          
 (defun prompt-generator (&optional (num 0) (ctl-string "[~d] "))
   "Return a function that prints prompts like [l], [2], etc."
   #'(lambda () (format t ctl-string (incf num))))
 ```
 
 ## 6.2 A Pattern-Matching Tool
-{:#s0015}
-{:.h1hd}
 
-The `pat-match` function was a pattern matcher defined specifically for the ELIZA !!!(span) {:.smallcaps} program.
+The `pat-match` function was a pattern matcher defined specifically for the ELIZA program.
 Subsequent programs will need pattern matchers too, and rather than write specialized matchers for each new program, it is easier to define one general pattern matcher that can serve most needs, and is extensible in case novel needs come up.
 
 The problem in designing a "general" tool is deciding what features to provide.
@@ -179,13 +173,9 @@ It succeeds because the < matches one of the three possibilities specified by `(
 
 Here is an example of an `?and` pattern that checks if an expression is both a number and odd:
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `> (pat-match` | `'(x = (?and (?is ?n numberp) (?is ?n oddp)))` |
-| | `'(x = 3))` |
-| `((?N . 3))` | |
+```lisp
+> (pat-match '(x = (?and (?is ?n numberp) (?is ?n oddp))) '(x = 3)) => ((?N . 3))
+```
 
 The next pattern uses `?not` to insure that two parts are not equal:
 
@@ -206,27 +196,23 @@ It has to be listed as a segment pattern rather than a single pattern because it
 When the description of a problem gets this complicated, it is a good idea to attempt a more formal specification.
 The following table describes a grammar of patterns, using the same grammar rule format described in [chapter 2](B9780080571157500029.xhtml).
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| *pat*=> | *var* | match any one expression |
-| *Constant* | match just this atom |
-| *segment*-*pat* | match something against a sequence |
-| *single*-*pat* | match something against one expression |
-| (*pat*. *pat*) | match the first and the rest |
-| *single*-*pat*=> | (?`is`*var predicate*) | test predicate on one expression |
-| (?`or`*pat*...) | match any pattern on one expression |
-| (?`and`*pat*...) | match every pattern on one expression |
-| (?`not`*pat*...) | succeed if pattern(s) do not match |
-| *segment*-*pat*=> | ( (?* *var*)...) | match zero or more expressions |
-| ( (?+ *var*) ... ) | match one or more expressions |
-| ( ( ?? *var*) ... ) | match zero or one expression |
-| ( ( ?`if`*exp* )...) | test if exp (which may contain variables) is true |
-| *Var*=> | ?*chars* | a symbol starting with ? |
-| *constant*=> | *atom* | any nonvariable atom |
-
-![t0015](images/B9780080571157500066/t0015.png)
+| []()              |                        |                                                   |
+|-------------------|------------------------|---------------------------------------------------|
+| *pat*=>           | *var*                  | match any one expression                          |
+|                   | *Constant*             | match just this atom                              |
+|                   | *segment*-*pat*        | match something against a sequence                |
+|                   | *single*-*pat*         | match something against one expression            |
+|                   | (*pat* . *pat*)         | match the first and the rest                      |
+| *single*-*pat*=>  | (?is *var predicate*) | test predicate on one expression                  |
+|                   | (?or *pat*...)        | match any pattern on one expression               |
+|                   | (?and *pat*...)       | match every pattern on one expression             |
+|                   | (?not *pat*...)       | succeed if pattern(s) do not match                |
+| *segment*-*pat*=> | ( (?* *var*)...)       | match zero or more expressions                    |
+|                   | ( (?+ *var*) ... )     | match one or more expressions                     |
+|                   | ( ( ?? *var*) ... )    | match zero or one expression                      |
+|                   | ( ( ?if *exp* )...)   | test if exp (which may contain variables) is true |
+| *Var* =>          | ?*chars*               | a symbol starting with ?                          |
+| *constant* =>     | *atom*                 | any nonvariable atom                              |
 
 Despite the added complexity, all patterns can still be classified into five cases.
 The pattern must be either a variable, constant, a (generalized) segment pattern, a (generalized) single-element pattern, or a cons of two patterns.
@@ -238,7 +224,7 @@ The following definition of `pat-match` reflects the five cases (along with two 
   (cond ((eq bindings fail) fail)
     ((variable-p pattern)
       (match-variable pattern input bindings))
-    ((eq1 pattern input) bindings)
+    ((eql pattern input) bindings)
     ((segment-pattern-p pattern)
       (segment-matcher pattern input bindings))
     ((single-pattern-p pattern) ; ***
@@ -250,43 +236,47 @@ The following definition of `pat-match` reflects the five cases (along with two 
     (t fail)))
 ```
 
-For completeness, we repeat here the necessary constants and low-level functions from ELIZA !!!(span) {:.smallcaps} :
+For completeness, we repeat here the necessary constants and low-level functions from ELIZA:
 
 ```lisp
 (defconstant fail nil "Indicates pat-match failure")
+
 (defconstant no-bindings '((t . t))
   "Indicates pat-match success, with no variables.")
+  
 (defun variable-p (x)
   "Is x a variable (a symbol beginning with '?')?"
-  (and (symbolp x) (equal (char (symbol-name x) 0) #\?)))
+  (and (symbolp x) (equal (elt (symbol-name x) 0) #\?)))
+  
 (defun get-binding (var bindings)
   "Find a (variable . value) pair in a binding list."
   (assoc var bindings))
+
 (defun binding-var (binding)
   "Get the variable part of a single binding."
   (car binding))
+  
 (defun binding-val (binding)
   "Get the value part of a single binding."
   (cdr binding))
+  
 (defun make-binding (var val) (cons var val))
+
 (defun lookup (var bindings)
   "Get the value part (for var) from a binding list."
   (binding-val (get-binding var bindings)))
+  
 (defun extend-bindings (var val bindings)
   "Add a (var . value) pair to a binding list."
   (cons (make-binding var val)
     ;; Once we add a "real" binding,
-    ;; we can get rid of the dumrny no-bindings
+    ;; we can get rid of the dummy no-bindings
     (if (eq bindings no-bindings)
       nil
-      bindings)
+      bindings)))
+      
 (defun match-variable (var input bindings)
-```
-
-`  "Does VAR match input?
-Uses (or updates) and returns bindings."`
-
-```lisp
+  "Does VAR match input? Uses (or updates) and returns bindings."
   (let ((binding (get-binding var bindings)))
     (cond ((not binding) (extend-bindings var input bindings))
       ((equal input (binding-val binding)) bindings)
@@ -309,9 +299,9 @@ This style of programming, where pattern/action pairs are stored in a table, is 
 It is a very flexible style that is appropriate for writing extensible systems.
 
 There are many ways to implement tables in Common Lisp, as discussed in [section 3.6](B9780080571157500030.xhtml#s0080), [page 73](B9780080571157500030.xhtml#p73).
-In this case, the keys to the table will be symbols (like ?*), and it is fine if the representation of the table is distributed across memory.
+In this case, the keys to the table will be symbols  (like `?*`), and it is fine if the representation of the table is distributed across memory.
 Thus, property lists are an appropriate choice.
-We will have two tables, represented by the `segment-match` property and the `single-match` property of symbols like ?*.
+We will have two tables, represented by the `segment-match` property and the `single-match` property of symbols like `?*`.
 The value of each property will be the name of a function that implements the match.
 Here are the table entries to implement the grammar listed previously:
 
@@ -321,13 +311,8 @@ Here are the table entries to implement the grammar listed previously:
 (setf (get '?and 'single-match) 'match-and)
 (setf (get '?not 'single-match) 'match-not)
 (setf (get '?* 'segment-match) 'segment-match)
-(setf (get '?+ 'segment-match) 'segment-match  +)
-```
-
-`(setf (get '??
-'segment-match) 'segment-match?)`
-
-```lisp
+(setf (get '?+ 'segment-match) 'segment-match+)
+(setf (get '?? 'segment-match) 'segment-match?)
 (setf (get '?if 'segment-match) 'match-if)
 ```
 
@@ -341,28 +326,28 @@ A function that looks up a data-driven function and calls it (such as `segment-m
   (and (consp pattern) (consp (first pattern))
     (symbolp (first (first pattern)))
     (segment-match-fn (first (first pattern)))))
+    
 (defun single-pattern-p (pattern)
-  "Is this a single-matching pattern?
-```
-
-`  E.g.
-(?is x predicate) (?and . patterns) (?or . patterns)."`
-
-```lisp
+  "Is this a single-matching pattern? 
+  E.g. (?is x predicate) (?and . patterns) (?or . patterns)."
   (and (consp pattern)
       (single-match-fn (first pattern))))
+      
 (defun segment-matcher (pattern input bindings)
   "Call the right function for this kind of segment pattern."
   (funcall (segment-match-fn (first (first pattern)))
         pattern input bindings))
+	
 (defun single-matcher (pattern input bindings)
   "Call the right function for this kind of single pattern."
   (funcall (single-match-fn (first pattern))
         (rest pattern) input bindings))
+	
 (defun segment-match-fn (x)
   "Get the segment-match function for x,
   if it is a symbol that has one."
   (when (symbolp x) (get x 'segment-match)))
+  
 (defun single-match-fn (x)
   "Get the single-match function for x,
   if it is a symbol that has one."
@@ -383,6 +368,7 @@ First, the single-pattern matching functions:
         (not (funcall pred input)))
       fail
       new-bindings)))
+      
 (defun match-and (patterns input bindings)
   "Succeed if all the patterns match the input."
   (cond ((eq bindings fail) fail)
@@ -390,6 +376,7 @@ First, the single-pattern matching functions:
       (t (match-and (rest patterns) input
               (pat-match (first patterns) input
                   bindings)))))
+		  
 (defun match-or (patterns input bindings)
   "Succeed if any one of the patterns match the input."
   (if (null patterns)
@@ -399,6 +386,7 @@ First, the single-pattern matching functions:
         (if (eq new-bindings fail)
           (match-or (rest patterns) input bindings)
           new-bindings))))
+	  
 (defun match-not (patterns input bindings)
   "Succeed if none of the patterns match the input
   This will never bind any variables."
@@ -408,10 +396,10 @@ First, the single-pattern matching functions:
 ```
 
 Now the segment-pattern matching functions.
-`segment-match` is similar to the version presented as part of ELIZA !!!(span) {:.smallcaps} . The difference is in how we determine pos, the position of the first element of the input that could match the next element of the pattern after the segment variable.
-In ELIZA !!!(span) {:.smallcaps} , we assumed that the segment variable was either the last element of the pattern or was followed by a constant.
+`segment-match` is similar to the version presented as part of ELIZA. The difference is in how we determine `pos`, the position of the first element of the input that could match the next element of the pattern after the segment variable.
+In ELIZA, we assumed that the segment variable was either the last element of the pattern or was followed by a constant.
 In the following version, we allow nonconstant patterns to follow segment variables.
-The function `first -match - pos` is added to handle this.
+The function `first-match-pos` is added to handle this.
 If the following element is in fact a constant, the same calculation is done using `position`.
 If it is not a constant, then we just return the first possible starting position-unless that would put us past the end of the input, in which case we return nil to indicate failure:
 
@@ -433,39 +421,32 @@ If it is not a constant, then we just return the first possible starting positio
               (if (eq b2 fail)
                 (segment-match pattern input bindings (+ pos 1))
                 b2)))))))
-(defun first-match-pos (patl input start)
-  "Find the first position that pat1 could possibly match input,
+		
+ (defun first-match-pos (pat1 input start)
+   "Find the first position that pat1 could possibly match input,
+   starting at position start. If pat1 is non-constant, then just  return start."
+   (cond ((and (atom pat1) (not (variable-p pat1)))
+	  (position pat1 input :start start :test #'equal))
+	 ((<= start (length input)) start)
+	 (t nil)))
 ```
 
-`  starting at position start.
-If pat1 is non-constant, then just`
-
-```lisp
-  return start."
-  (cond ((and (atom pat1) (not (variable-p pat1)))
-        (position pat1 input :start start :test #'equal))
-      ((< start (length input)) start)
-      (t nil)))
-```
-
-In the first example below, the segment variable ?`x` matches the sequence (`b c`).
+In the first example below, the segment variable `?x` matches the sequence (`b c`).
 In the second example, there are two segment variables in a row.
-The first successful match is achieved with the first variable, ?`x`, matching the empty sequence, and the second one, ?`y`, matching (`b c`).
+The first successful match is achieved with the first variable, `?x`, matching the empty sequence, and the second one, `?y`, matching (`b c`).
 
 ```lisp
 > (pat-match '(a (?* ?x) d) '(a b c d)) => ((?X B C))
 > (pat-match '(a (?* ?x) (?* ?y) d) '(a b c d))=> ((?Y B C) (?X))
 ```
 
-In the next example, ?`x` is first matched against nil and ?`y` against (`b c d` ), but that fails, so we try matching ?`x` against a segment of length one.
-That fails too, but finally the match succeeds with ?`x` matching the two-element segment (`b c`), and ?`y` matching (`d`).
+In the next example, `?x` is first matched against nil and `?y` against (`b c d` ), but that fails, so we try matching `?x` against a segment of length one.
+That fails too, but finally the match succeeds with `?x` matching the two-element segment (`b c`), and `?y` matching (`d`).
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `> (pat-match` | `'(a (?* ?x) (?* ?y) ?x ?y)` |
-| | `'(a b c d (b c) (d))) => ((?Y D) (?X B C))` |
+| []()           |                                              |
+| ---            | ---                                          |
+| `> (pat-match` | `'(a (?* ?x) (?* ?y) ?x ?y)`                 |
+|                | `'(a b c d (b c) (d))) => ((?Y D) (?X B C))` |
 
 Given `segment-match`, it is easy to define the function to match one-or-more elements and the function to match zero-or-one element:
 
@@ -503,18 +484,20 @@ This is one of the few cases where it is appropriate to call `eval`: when we wan
 Here are two examples using `?if`.
 The first succeeds because `(+  3 4)` is indeed `7`, and the second fails because `(>  3 4)` is false.
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
+| []()           |                                                 |
+|----------------|-------------------------------------------------|
 | `> (pat-match` | `'(?x ?op ?y is ?z (?if (eq1 (?op ?x ?y) ?z)))` |
-| | `'(3 + 4 is 7))` |
-| `((?Z . 7) (?Y . 4) (?0P . +) (?X . 3))` |
-| `> (pat-match` | `'(?x ?op ?y (?if (?op ?x ?y)))` |
-| | `'(3 > 4))` |
-| `NIL` | |
+|                | `'(3 + 4 is 7))`                                |
 
-![t0025](images/B9780080571157500066/t0025.png)
+```
+((?Z . 7) (?Y . 4) (?0P . +) (?X . 3))
+```
+
+| []()           |                                  |
+|----------------|----------------------------------|
+| `> (pat-match` | `'(?x ?op ?y (?if (?op ?x ?y)))` |
+|                | `'(3 > 4))`                      |
+| `NIL`          |                                  |
 
 The syntax we have defined for patterns has two virtues: first, the syntax is very general, so it is easy to extend.
 Second, the syntax can be easily manipulated by `pat-match`.
@@ -562,15 +545,13 @@ We would use this facility as follows:
 > (pat-match axyd '(a b c d)) => ((?Y B C) (?X))
 ```
 
-**Exercise  6**.**1** [**m**] Go back and change the ELIZA !!!(span) {:.smallcaps} rules to use the abbreviation facility.
+**Exercise  6**.**1** [**m**] Go back and change the ELIZA rules to use the abbreviation facility.
 Does this make the rules easier to read?
 
 **Exercise  6**.**2** [**h**] In the few prior examples, every time there was a binding of pattern variables that satisfied the input, that binding was found.
 Informally, show that `pat-match` will always find such a binding, or show a counterexample where it fails to find one.
 
 ## 6.3 A Rule-Based Translator Tool
-{:#s0020}
-{:.h1hd}
 
 As we have defined it, the pattern matcher matches one input against one pattern.
 In `eliza`, we need to match each input against a number of patterns, and then return a result based on the rule that contains the first pattern that matches.
@@ -627,8 +608,6 @@ The rule-based translater tool now looks like this:
 ```
 
 ## 6.4 A Set of Searching Tools
-{:#s0025}
-{:.h1hd}
 
 The GPS program can be seen as a problem in *search*.
 In general, a search problem involves exploring from some starting state and investigating neighboring states until a solution is reached.
@@ -668,8 +647,6 @@ Here is a tree:
 ![u06-01](images/chapter6/u06-01.jpg)
 
 ### Searching Trees
-{:#s0035}
-{:.h2hd}
 
 We will call our first searching tool `tree-search`, because it is designed to search state spaces that are in the form of trees.
 It takes four arguments: (1) a list of valid starting states, (2) a predicate to decide if we have reached a goal state, (3) a function to generate the successors of a state, and (4) a function that decides in what order to search.
@@ -824,8 +801,6 @@ At most, depth-first search considers four at a time; in general it will need to
 ```
 
 ### Guiding the Search
-{:#s0040}
-{:.h2hd}
 
 While breadth-first search is more methodical, neither strategy is able to take advantage of any knowledge about the state space.
 They both search blindly.
@@ -964,25 +939,24 @@ Another strategy would be for the mountaineer to turn back and try again when th
 As a concrete example of a problem that can be solved by search, consider the task of planning a flight across the North American continent in a small airplane, one whose range is limited to 1000 kilometers.
 Suppose we have a list of selected cities with airports, along with their position in longitude and latitude:
 
-!!!(table)
+```
+(defstruct (city (:type list)) name long lat)
+(defparameter *cities*
+```
 
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `(defstruct (city (:type list)) name long lat)` |
-| `(defparameter *cities*` |
-| `'((Atlanta` | `84.23 33.45)` | `(Los-Angeles` | `118.15 34.03` |
-| `(Boston` | `71.05 42.21)` | `(Memphis` | `90.03 35.09)` |
-| `(Chicago` | `87.37 41.50)` | `(New-York` | `73.58 40.47)` |
-| `(Denver` | `105.00 39.45)` | `(Oklahoma-City` | `97.28 35.26)` |
-| `(Eugene` | `123.05 44.03)` | `(Pittsburgh` | `79.57 40.27)` |
-| `(Flagstaff` | `111.41 35.13)` | `(Quebec` | `71.11 46.49)` |
-| `(Grand-Jet` | `108.37 39.05)` | `(Reno` | `119.49 39.30)` |
-| `(Houston` | `105.00 34.00)` | `(San-Francisco` | `122.26 37.47)` |
-| `(Indianapolis` | `86.10 39.46)` | `(Tampa` | `82.27 27.57)` |
-| `(Jacksonville` | `81.40 30.22)` | `(Victoria` | `123.21 48.25)` |
-| `(Kansas-City` | `94.35 39.06)` | `(Wilmington` | `77.57 34.14)))` |
-
-![t0030](images/B9780080571157500066/t0030.png)
+| []()            |                 |                  |                  |
+|-----------------|-----------------|------------------|------------------|
+| `'((Atlanta`    | `84.23 33.45)`  | `(Los-Angeles`   | `118.15 34.03`   |
+| `(Boston`       | `71.05 42.21)`  | `(Memphis`       | `90.03 35.09)`   |
+| `(Chicago`      | `87.37 41.50)`  | `(New-York`      | `73.58 40.47)`   |
+| `(Denver`       | `105.00 39.45)` | `(Oklahoma-City` | `97.28 35.26)`   |
+| `(Eugene`       | `123.05 44.03)` | `(Pittsburgh`    | `79.57 40.27)`   |
+| `(Flagstaff`    | `111.41 35.13)` | `(Quebec`        | `71.11 46.49)`   |
+| `(Grand-Jet`    | `108.37 39.05)` | `(Reno`          | `119.49 39.30)`  |
+| `(Houston`      | `105.00 34.00)` | `(San-Francisco` | `122.26 37.47)`  |
+| `(Indianapolis` | `86.10 39.46)`  | `(Tampa`         | `82.27 27.57)`   |
+| `(Jacksonville` | `81.40 30.22)`  | `(Victoria`      | `123.21 48.25)`  |
+| `(Kansas-City`  | `94.35 39.06)`  | `(Wilmington`    | `77.57 34.14)))` |
 
 This example introduces a new option to `defstruct`.
 Instead of just giving the name of the structure, it is also possible to use:
@@ -999,10 +973,10 @@ Two other useful functions are `neighbors`, which finds all the cities within 10
 The former uses `find-a11-if`, which was defined on [page 101](B9780080571157500030.xhtml#p101) as a synonym for `remove-if-not`.
 
 
-| []() |
-|---|
+| []()                                  |
+|---------------------------------------|
 | ![f06-01](images/chapter6/f06-01.jpg) |
-| Figure 6.1: A Map of Some Cities |
+| Figure 6.1: A Map of Some Cities      |
 
 ```lisp
 (defun neighbors (city)
@@ -1065,8 +1039,6 @@ Because Flagstaff is closer to the destination than Grand Junction.
 The problem is that we are minimizing the distance to the destination at each step, when we should be minimizing the sum of the distance to the destination plus the distance already traveled.
 
 ### Search Paths
-{:#s0045}
-{:.h2hd}
 
 To minimize the total distance, we need some way to talk about the *path* that leads to the goal.
 But the functions we have defined so far only deal with individual states along the way.
@@ -1162,10 +1134,10 @@ In general, there may be even worse dead ends lurking in the search space.
 Look what happens when we limit the airplane's range to 700 kilometers.
 The map is shown in [figure 6.2](#f0015).
 
-| []() |
-|---|
-| ![f06-02](images/chapter6/f06-02.jpg) |
-| Figure 6.2: A Map of Cities within 700  km |
+| []()                                      |
+|-------------------------------------------|
+| ![f06-02](images/chapter6/f06-02.jpg)     |
+| Figure 6.2: A Map of Cities within 700 km |
 
 If we try to plan a trip from Tampa to Quebec, we can run into problems with the dead end at Wilmington, North Carolina.
 With a beam width of 1, the path to Jacksonville and then Wilmington will be tried first.
@@ -1232,8 +1204,6 @@ We also define `map-path` to iterate over a path, collecting values:
 ```
 
 ### Guessing versus Guaranteeing a Good Solution
-{:#s0050}
-{:.h2hd}
 
 Elementary AI textbooks place a great emphasis on search algorithms that are guaranteed to find the best solution.
 However, in practice these algorithms are hardly ever used.
@@ -1309,8 +1279,6 @@ So iterative deepening uses only slightly more time and much less space.
 We will see it again in [chapters 11](B978008057115750011X.xhtml) and [18](B9780080571157500182.xhtml).
 
 ### Searching Graphs
-{:#s0055}
-{:.h2hd}
 
 So far, `tree-search` has been the workhorse behind all the searching routines.
 This is curious, when we consider that the city problem involves a graph that is not a tree at all.
@@ -1318,15 +1286,15 @@ The reason `tree-search` works is that any graph can be treated as a tree, if we
 For example, the graph in [figure 6.3](#f0020) can be rendered as a tree.
 [Figure 6.4](#f0025) shows only the top four levels of the tree; each of the bottom nodes (except the 6  s) needs to be expanded further.
 
-| []() |
-|---|
+| []()                                  |
+|---------------------------------------|
 | ![f06-03](images/chapter6/f06-03.jpg) |
-| Figure 6.3: A Graph with Six Nodes |
+| Figure 6.3: A Graph with Six Nodes    |
 
-| []() |
-|---|
+| []()                                  |
+|---------------------------------------|
 | ![f06-04](images/chapter6/f06-04.jpg) |
-| Figure 6.4: The Corresponding Tree |
+| Figure 6.4: The Corresponding Tree    |
 
 In searching for paths through the graph of cities, we were implicitly turning the graph into a tree.
 That is, if `tree-search` found two paths from Pittsburgh to Kansas City (via Chicago or Indianapolis), then it would treat them as two independent paths, just as if there were two distinct Kansas Cities.
@@ -1529,17 +1497,15 @@ Here is a function that finds all solutions, using beam search:
 ```
 
 ## 6.5 GPS as Search
-{:#s0060}
-{:.h1hd}
 
 The GPS program can be seen as a problem in search.
 For example, in the three-block blocks world, there are only 13 different states.
 They could be arranged in a graph and searched just as we searched for a route between cities.
 [Figure 6.5](#f0030) shows this graph.
 
-| []() |
-|---|
-| ![f06-05](images/chapter6/f06-05.jpg) |
+| []()                                    |
+|-----------------------------------------|
+| ![f06-05](images/chapter6/f06-05.jpg)   |
 | Figure 6.5: The Blocks World as a Graph |
 
 The function `search-gps` does just that.
@@ -1557,10 +1523,10 @@ The goal predicate tests if the current state satisfies every condition in the g
       #'(lambda (state) (subsetp goal state :test #'equal))
       #'gps-successors
       #'(lambda (state)
-        (+ (count-if #'action-p state)
-          (count-if #'(lambda (con)
-                    (not (member-equal con state)))
-                goal)))
+          (+ (count-if #'action-p state)
+             (count-if #'(lambda (con)
+                           (not (member-equal con state)))
+                       goal)))
       beam-width)))
 ```
 
@@ -1571,12 +1537,13 @@ Here is the successor function:
   "Return a list of states reachable from this one using ops."
   (mapcar
     #'(lambda (op)
-    (append
-      (remove-if #'(lambda (x)
-                    (member-equal x (op-del-list op)))
-                state)
-      (op-add-list op)))
+        (append
+          (remove-if #'(lambda (x)
+                         (member-equal x (op-del-list op)))
+                     state)
+          (op-add-list op)))
     (applicable-ops state)))
+
 (defun applicable-ops (state)
   "Return a list of all ops that are applicable now."
   (find-all-if
@@ -1608,8 +1575,6 @@ But we could formulate means-ends analysis as forward search simply by reversing
 This is left as an exercise.
 
 ## 6.6 History and References
-{:#s0065}
-{:.h1hd}
 
 Pattern matching is one of the most important tools for AI.
 As such, it is covered in most textbooks on Lisp.
@@ -1622,8 +1587,6 @@ They are at a lower level of abstraction than the ones in this chapter.
 Iterative deepening was first presented by [Korf (1985)](B9780080571157500285.xhtml#bb0640), and iterative broadening by [Ginsberg and Harvey (1990)](B9780080571157500285.xhtml#bb0470).
 
 ## 6.7 Exercises
-{:#s0070}
-{:.h1hd}
 
 **Exercise  6**.**3** [**m**] Write a version of `interaetive-interpreter` that is more general than the one defined in this chapter.
 Decide what features can be specified, and provide defaults for them.
@@ -1662,20 +1625,16 @@ Use these costs instead of a constant cost of 1 for each operation.
 **Exercise  6**.**15** [**d**] Write a version of GPS that uses the searching tools but does means-ends analysis.
 
 ## 6.8 Answers
-{:#s0075}
-{:.h1hd}
 
 **Answer 6**.**2** Unfortunately, `pat-match` does not always find the answer.
 The problem is that it will only rebind a segment variable based on a failure to match the rest of the pattern after the segment variable.
 In all the examples above, the "rest of the pattern after the segment variable" was the whole pattern, so `pat-match` always worked properly.
 But if a segment variable appears nested inside a list, then the rest of the segment variable's sublist is only a part of the rest of the whole pattern, as the following example shows:
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `> (pat-match` | `'(((?* ?x) (?* ?y)) ?x ?y)` |
-| | `'((a b c d ) (a b) (c d)))`=> `NIL` |
+| []()           |                                      |
+| ---            | ---                                  |
+| `> (pat-match` | `'(((?* ?x) (?* ?y)) ?x ?y)`         |
+|                | `'((a b c d ) (a b) (c d)))`=> `NIL` |
 
 The correct answer with `?x` bound to `(a b)` and `?y` bound to `(c d)` is not found because the inner segment match succeeds with `?x` bound to `( )` and `?y` bound to `(a b c d)`, and once we leave the inner match and return to the top level, there is no going back for alternative bindings.
 
@@ -1717,13 +1676,11 @@ Here is another version that does all of the above and also handles multiple val
       ;; Now update the history variables
 ```
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
+| []()           |          |                   |
+| ---            | ---      | ---               |
 | `(setf +++ ++` | `/// //` | `*** (first ///)` |
-| `++ +` | `// /` | `** (first //)` |
-| `+ -` | `/ vais` | `* (first /))` |
+| `++ +`         | `// /`   | `** (first //)`   |
+| `+ -`          | `/ vais` | `* (first /))`    |
 
 ```lisp
       ;; Finally print the computed value(s)
@@ -1822,7 +1779,7 @@ Start with states,`
 !!!(p) {:.ftnote1}
 
 [2](#xfn0020) An alternative would be to reserve the question mark for variables only and use another notation for these match operators.
-Keywords would be a good choice, such as : `and, : or,``: is`, etc.
+Keywords would be a good choice, such as :and, :or, :is, etc.
 !!!(p) {:.ftnote1}
 
 [3](#xfn0025) The built-in constant `most-positive-fixnum` is a large integer, the largest that can be expressed without using bignums.

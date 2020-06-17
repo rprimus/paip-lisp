@@ -15,6 +15,8 @@ The book is available in these formats:
 * epub: [PAIP-safari.epub](https://github.com/norvig/paip-lisp/blob/master/PAIP-safari.epub) (much cleaner)
 * and `chapter?.md` markdown files:
 
+# Table of Contents
+
 - **Paradigms of Artificial Intelligence Programming**
   * [Front matter](docs/frontmatter.md)
   * [Preface](docs/preface.md)
@@ -88,7 +90,7 @@ The [Lisp code files](https://github.com/norvig/paip-lisp/tree/master/lisp) are 
 | 14   | [krep.lisp](lisp/krep.lisp)         | Final KR code: worlds and attached functions                           |
 | 15   | [cmacsyma.lisp](lisp/cmacsyma.lisp) | Efficient Macsyma with canonical form                                  |
 | 16   | [mycin.lisp](lisp/mycin.lisp)       | The Emycin expert system shell                                         |
-| 16   | [mysin-r.lisp](lisp/mysin-r.lisp)   | Some rules for a medical application of emycin                         |
+| 16   | [mycin-r.lisp](lisp/mycin-r.lisp)   | Some rules for a medical application of emycin                         |
 | 17   | [waltz.lisp](lisp/waltz.lisp)       | A Line-Labeling program using the Waltz algorithm                      |
 | 18   | [othello.lisp](lisp/othello.lisp)   | The Othello playing program and some strategies                        |
 | 18   | [othello2.lisp](lisp/othello2.lisp) | Additional strategies for Othello                                      |
@@ -123,3 +125,8 @@ your system you may have to alter its definition, in
 or a chapter number or a list of chapter numbers, can be used to see examples
 of the use of various functions.  For example, `(do-examples 1)` shows
 the examples from chapter 1. Access this by doing `(requires "examples")`.
+
+# Other resources
+
+* I wrote a [retrospective](http://norvig.com/Lisp-retro.html) on the book.
+* There is a nice [Python version](https://github.com/dhconnelly/paip-python) of the code, by Georgia Tech.

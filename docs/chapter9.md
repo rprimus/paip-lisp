@@ -125,8 +125,6 @@ The techniques outlined here result in a 130-fold speed-up in this program.
 [Chapter 10](B9780080571157500108.xhtml) concentrates on lower-level "tricks" for improving efficiency further.
 
 ## 9.1 Caching Results of Previous Computations: Memoization
-{:#s0010}
-{:.h1hd}
 
 We start with a simple mathematical function to demonstrate the advantages of caching techniques.
 Later we will demonstrate more complex examples.
@@ -153,24 +151,17 @@ This process is called *memoization*.
 The function `memo` below is a higher-order function that takes a function as input and returns a new function that will compute the same results, but not do the same computation twice.
 
 ```lisp
-(defun memo (fn)
+(defun memo (fn &key (key #'first) (test #'eql) name)
+  "Return a memo-function of fn."
+  (let ((table (make-hash-table :test test)))
+    (setf (get name 'memo) table)
+    #'(lambda (&rest args)
+        (let ((k (funcall key args)))
+          (multiple-value-bind (val found-p)
+              (gethash k table)
+            (if found-p val
+                (setf (gethash k table) (apply fn args))))))))
 ```
-
-      `"Return a memo-function of fn."`
-
-      `(let ((table (make-hash-table)))`
-
-          `#'(lambda (x)`
-
-                  `(multiple-value-bind (val found-p)`
-
-                      `(gethash x table)`
-
-              `(if found-p`
-
-                            `val`
-
-                            `(setf (gethash x table) (funcall fn x)))))))`
 
 The expression (`memo #'fib`) will produce a function that remembers its results between calls, so that, for example, if we apply it to 3 twice, the first call will do the computation of (`fib 3`), but the second will just look up the result in a hash table.
 With `fib` traced, it would look like this:
@@ -209,12 +200,10 @@ It would be better if even the internal, recursive calls were memoized, but they
 We can solve this problem easily enough with the function `memoize`:
 
 ```lisp
-(defun memoize (fn-name)
+(defun memoize (fn-name &key (key #'first) (test #'eql))
+  "Replace fn-name's global definition with a memoized version."
+  (clear-memoize fn-name)
 ```
-
-      `"Replace fn-name's global definition with a memoized version."`
-
-      `(setf (symbol-function fn-name) (memo (symbol-function fn-name))))`
 
 When passed a symbol that names a function, `memoize` changes the global definition of the function to a memo-function.
 Thus, any recursive calls will go first to the memo-function, rather than to the original function.
@@ -355,40 +344,34 @@ Or define a macro that combines `defun` and `memoize`:
 
 ```lisp
 (defmacro defun-memo (fn args &body body)
-```
+  "Define a memoized function."
+  `(memoize (defun ,fn ,args . ,body)))
 
-      `"Define a memoized function."`
-
-      `'(memoize (defun ,fn ,args . ,body)))`
-
-```lisp
 (defun-memo f (x) ...)
 ```
 
 Both of these approaches rely on the fact that `defun` returns the name of the function defined.
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| *n* | `(fib *n*)` | unmemoized | memoized | memoized up to |
-| 25 | 121393 | 1.1 | .010 | 0 |
-| 26 | 196418 | 1.8 | .001 | 25 |
-| 27 | 317811 | 2.9 | .001 | 26 |
-| 28 | 514229 | 4.7 | .001 | 27 |
-| 29 | 832040 | 8.2 | .001 | 28 |
-| 30 | 1346269 | 12.4 | .001 | 29 |
-| 31 | 2178309 | 20.1 | .001 | 30 |
-| 32 | 3524578 | 32.4 | .001 | 31 |
-| 33 | 5702887 | 52.5 | .001 | 32 |
-| 34 | 9227465 | 81.5 | .001 | 33 |
-| 50 | 2.0e10 | - | .014 | 34 |
-| 100 | 5.7e20 | - | .031 | 50 |
-| 200 | 4.5e41 | - | .096 | 100 |
-| 500 | 2.2e104 | - | .270 | 200 |
-| 1000 | 7.0e208 | - | .596 | 500 |
-| 1000 | 7.0e208 | - | .001 | 1000 |
-| 1000 | 7.0e208 | - | .876 | 0 |
+| []() |             |            |          |                |
+|------|-------------|------------|----------|----------------|
+| *n*  | `(fib *n*)` | unmemoized | memoized | memoized up to |
+| 25   | 121393      | 1.1        | .010     | 0              |
+| 26   | 196418      | 1.8        | .001     | 25             |
+| 27   | 317811      | 2.9        | .001     | 26             |
+| 28   | 514229      | 4.7        | .001     | 27             |
+| 29   | 832040      | 8.2        | .001     | 28             |
+| 30   | 1346269     | 12.4       | .001     | 29             |
+| 31   | 2178309     | 20.1       | .001     | 30             |
+| 32   | 3524578     | 32.4       | .001     | 31             |
+| 33   | 5702887     | 52.5       | .001     | 32             |
+| 34   | 9227465     | 81.5       | .001     | 33             |
+| 50   | 2.0e10      | -          | .014     | 34             |
+| 100  | 5.7e20      | -          | .031     | 50             |
+| 200  | 4.5e41      | -          | .096     | 100            |
+| 500  | 2.2e104     | -          | .270     | 200            |
+| 1000 | 7.0e208     | -          | .596     | 500            |
+| 1000 | 7.0e208     | -          | .001     | 1000           |
+| 1000 | 7.0e208     | -          | .876     | 0              |
 
 Now we show a table giving the values of `(fib *n*)` for certain *n*, and the time in seconds to compute the value, before and after `(memoize 'fib)`.
 For larger values of *n*, approximations are shown in the table, although `fib` actually returns an exact integer.
@@ -426,50 +409,35 @@ If you want to use all the arguments, specify `identity` as the key.
 Note that if the key is a list of arguments, then you will have to use `equal` hash tables.
 
 ```lisp
-(defun memo (fn name key test)
+(defun memo (fn &key (key #'first) (test #'eql) name)
+  "Return a memo-function of fn."
+  (let ((table (make-hash-table :test test)))
+    (setf (get name 'memo) table)
+    #'(lambda (&rest args)
+        (let ((k (funcall key args)))
+          (multiple-value-bind (val found-p)
+              (gethash k table)
+            (if found-p val
+                (setf (gethash k table) (apply fn args))))))))
 ```
-
-      `"Return a memo-function of fn."`
-
-      `(let ((table (make-hash-table :test test)))`
-
-          `(setf (get name 'memo) table)`
-
-          `#'(lambda (&rest args)`
-
-                  `(let ((k (funcall key args)))`
-
-                          `(multiple-value-bind (val found-p)`
-
-                                `(gethash k table)`
-
-                          `(if found-p val`
-
-                                              `(setf (gethash k table) (apply fn args))))))))`
 
 ```lisp
 (defun memoize (fn-name &key (key #'first) (test #'eql))
+  "Replace fn-name's global definition with a memoized version."
+  (clear-memoize fn-name)
+  (setf (symbol-function fn-name)
+        (memo (symbol-function fn-name)
+              :name fn-name :key key :test test)))
 ```
-
-      `"Replace fn-name's global definition with a memoized version."`
-
-      `(setf (symbol-function fn-name)`
-
-                  `(memo (symbol-function fn-name) fn-name key test)))`
 
 ```lisp
 (defun clear-memoize (fn-name)
+  "Clear the hash table from a memo function."
+  (let ((table (get fn-name 'memo)))
+    (when table (clrhash table))))
 ```
 
-      `"Clear the hash table from a memo function."`
-
-      `(let ((table (get fn-name 'memo)))`
-
-                  `(when table (clrhash table))))`
-
 ## 9.2 Compiling One Language into Another
-{:#s0015}
-{:.h1hd}
 
 In [chapter 2](B9780080571157500029.xhtml) we defined a new language-the language of grammar rules-which was processed by an interpreter designed especially for that language.
 An *interpreter* is a program that looks at some data structure representing a "program" or sequence of rules of some sort and interprets or evaluates those rules.
@@ -508,12 +476,10 @@ It makes use of the auxiliary functions `one-of` and `rule-lhs` and `rule-rhs` f
   `(list (random-elt set)))`
 
 ```lisp
-(defun random-elt (choices)
+(defun random-elt (seq)
+  "Pick a random element out of a sequence."
+  (elt seq (random (length seq))))
 ```
-
-  `"Choose an element from a list at random."`
-
-  `(elt choices (random (length choices))))`
 
 The function `compile-rule` turns a rule into a function definition by building up Lisp code that implements all the actions that generate would take in interpreting the rule.
 There are three cases.
@@ -570,11 +536,9 @@ Finally, if there are several elements in the right-hand side, they are each tur
 
 ```lisp
 (defun length=1 (x)
+  "Is x a list of length 1?"
+  (and (consp x) (null (cdr x))))
 ```
-
-  `"Is X a list of length 1?"`
-
-  `(and (consp x) (null (rest x))))`
 
 The Lisp code built by `compile-rule` must be compiled or interpreted to make it available to the Lisp system.
 We can do that with one of the following forms.
@@ -734,28 +698,24 @@ F1
 > (disassemble 'fl)
 ```
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `6 PUSH` | `ARGIO ; N` |
-| `7 MOVEM` | `PDL-PUSH` |
-| `8 *` | `PDL-POP` |
-| `9 RETURN` | `PDL-POP` |
+| []()       |             |
+|------------|-------------|
+| `6 PUSH`   | `ARGIO ; N` |
+| `7 MOVEM`  | `PDL-PUSH`  |
+| `8 *`      | `PDL-POP`   |
+| `9 RETURN` | `PDL-POP`   |
 
 ```lisp
 Fl
 > (disassemble 'f2)
 ```
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `6 PUSH` | `ARGO ; N` |
-| `7 MOVEM` | `PDL-PUSH` |
-| `8 *` | `PDL-POP` |
-| `9 RETURN` | `PDL-POP` |
+| []()       |            |
+|------------|------------|
+| `6 PUSH`   | `ARGO ; N` |
+| `7 MOVEM`  | `PDL-PUSH` |
+| `8 *`      | `PDL-POP`  |
+| `9 RETURN` | `PDL-POP`  |
 
 ```lisp
 F2
@@ -771,8 +731,6 @@ As a user of this compiler, there's no need for me to write clever macros or com
 With another compiler that didn't know about such optimizations, I would have to be more careful about the code I generate.
 
 ## 9.3 Delaying Computation
-{:#s0020}
-{:.h1hd}
 
 Back on [Page 45](B9780080571157500029.xhtml#p45), we saw a program to generate all strings derivable from a grammar.
 One drawback of this program was that some grammars produce an infinite number of strings, so the program would not terminate on those grammars.
@@ -791,13 +749,12 @@ The function `force` checks if the function needs to be called, and returns the 
 If `force` is passed an argument that is not a delay, it just returns the argument.
 
 ```lisp
-(defstruct delay (value nil) (function nil))
+(defstruct delay value (computed? nil))
+
 (defmacro delay (&rest body)
+  "A computation that can be executed later by FORCE."
+  `(make-delay :value #'(lambda () . ,body)))
 ```
-
-  `"A computation that can be executed later by FORCE."`
-
-  `'(make-delay :function #'(lambda () . ,body)))`
 
 ```lisp
 (defun force (x)
@@ -820,6 +777,7 @@ If `force` is passed an argument that is not a delay, it just returns the argume
                   `(setf (delay-function x) nil))`
 
             `(delay-value x))))`
+```
 
 Here's an example of the use of `delay`.
 The list `x` is constructed using a combination of normal evaluation and delayed evaluation.
@@ -1199,8 +1157,6 @@ Define a function that will fairly interleave elements, so that all of them are 
 Show that the function works by changing `generate-all` to work with it.
 
 ## 9.4 Indexing Data
-{:#s0025}
-{:.h1hd}
 
 Lisp makes it very easy to use lists as the universal data structure.
 A list can represent a set or an ordered sequence, and a list with sublists can represent a tree or graph.
@@ -1216,8 +1172,6 @@ You may want to build your own hash tables if, for example, you never need to de
 We will see an example of efficient indexing in [section 9.6](#s0035) ([Page 297](B9780080571157500091.xhtml#p297)).
 
 ## 9.5 Instrumentation: Deciding What to Optimize
-{:#s0030}
-{:.h1hd}
 
 Because Lisp is such a good rapid-prototyping language, we can expect to get a working implementation quickly.
 Before we go about trying to improve the efficiency of the implementation, it is a good idea to see what parts are used most often.
@@ -1629,8 +1583,6 @@ It evaluates the first argument, and if all goes well it then evaluates the othe
 But if an error occurs during the evaluation of the first argument and computation is aborted, then the subsequent arguments (called cleanup forms) are evaluated anyway.
 
 ## 9.6 A Case Study in Efficiency: The SIMPLIFY Program
-{:#s0035}
-{:.h1hd}
 
 Suppose we wanted to speed up the `simplify` program of [chapter 8](B978008057115750008X.xhtml).
 This section shows how a combination of general techniques-memoizing, indexing, and compiling-can be used to speed up the program by a factor of 130.
@@ -1682,24 +1634,20 @@ Evaluation of (MAPCAR #'SIMPLIFY *TEST-DATA*) took 6.612  seconds.
 Total elapsed time: 22.819614  seconds
 ```
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `Count` | `Secs` | `Time%` | `Name` |
-| `51690` | `11.57` | `51%` | `PAT-MATCH` |
-| `37908` | `8.75` | `38%` | `VARIABLE-P` |
-| `1393` | `0.32` | `1%` | `MATCH-VARIABLE` |
-| `906` | `0.20` | `1%` | `SIMPLIFY` |
-| `274` | `1.98` | `9%` | `SIMPLIFY-EXP` |
+| []()    |         |         |                  |
+|---------|---------|---------|------------------|
+| `Count` | `Secs`  | `Time%` | `Name`           |
+| `51690` | `11.57` | `51%`   | `PAT-MATCH`      |
+| `37908` | `8.75`  | `38%`   | `VARIABLE-P`     |
+| `1393`  | `0.32`  | `1%`    | `MATCH-VARIABLE` |
+| `906`   | `0.20`  | `1%`    | `SIMPLIFY`       |
+| `274`   | `1.98`  | `9%`    | `SIMPLIFY-EXP`   |
 
 Running the test takes 6.6  seconds normally, although the time triples when the profiling overhead is added in.
 It should be clear that to speed things up, we have to either speed up or cut down on the number of calls to `pat-match` or `variable-p`, since together they account for 89% of the calls (and 89% of the time as well).
 We will look at three methods for achieving both those goals.
 
 #### Memoization
-{:#s0045}
-{:.h3hd}
 
 Consider the rule that transforms (`x  +  x`) into (`2 * x`).
 Once this is done, we have to simplify the result, which involves resimplifying the components.
@@ -1716,21 +1664,18 @@ The simplifier was timed for all four combinations of `eq` or `equal` hash table
 The fastest result was `equal` hashing and nonresetting.
 Note that with `eq` hashing, the resetting version was faster, presumably because it couldn't take advantage of the common subexpressions between examples (since they aren't `eq`).
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
 | hashing | resetting | time |
-| none | - | 6.6 |
-| equal | yes | 3.8 |
-| equal | no | 3.0 |
-| eq | yes | 7.0 |
-| eq | no | 10.2 |
+|---------|-----------|------|
+| none    | -         | 6.6  |
+| equal   | yes       | 3.8  |
+| equal   | no        | 3.0  |
+| eq      | yes       | 7.0  |
+| eq      | no        | 10.2 |
 
 This approach makes the function `simplify` remember the work it has done, in a hash table.
 If the overhead of hash table maintenance becomes too large, there is an alternative: make the data remember what simplify has done.
-This approach was taken in MACSYMA !!!(span) {:.smallcaps} : it represented operators as lists rather than as atoms.
-Thus, instead of `(* 2 x)`, MACSYMA !!!(span) {:.smallcaps} would use `((*) 2 x)`.
+This approach was taken in MACSYMA: it represented operators as lists rather than as atoms.
+Thus, instead of `(* 2 x)`, MACSYMA would use `((*) 2 x)`.
 The simplification function would destructively insert a marker into the operator list.
 Thus, the result of simplifying 2*x* would be `((* simp) 2 x)`.
 Then, when the simplifier was called recursively on this expression, it would notice the `simp` marker and return the expression as is.
@@ -1740,8 +1685,6 @@ The data-oriented approach has two drawbacks: it doesn't identify structures tha
 The beauty of the hash table approach is that it is transparent; no code needs to know that memoization is taking place.
 
 #### Indexing
-{:#s0050}
-{:.h3hd}
 
 We currently go through the entire list of rules one at a time, checking each rule.
 This is inefficient because most of the rules could be trivially ruled out-if only they were indexed properly.
@@ -1790,8 +1733,6 @@ Implement this alternative, and time it against the hash table approach.
 Remember that you need some way of clearing the old rules-trivial with a hash table, but not automatic with property lists.
 
 #### Compilation
-{:#s0055}
-{:.h3hd}
 
 You can look at `simplify-exp` as an interpreter for the simplification rule language.
 One proven technique for improving efficiency is to replace the interpreter with a compiler.
@@ -1851,8 +1792,6 @@ The comments following were not generated by the compiler.
 I chose this format for the code because I imagined (and later *show*) that it would be fairly easy to write the compiler for it.
 
 #### The Single-Rule Compiler
-{:#s0060}
-{:.h3hd}
 
 Here I show the complete single-rule compiler, to be followed by the indexed-rule-set compiler.
 The single-rule compiler works like this:
@@ -2063,8 +2002,6 @@ XR '*)`
 ```
 
 #### The Rule-Set Compiler
-{:#s0065}
-{:.h3hd}
 
 The next step is to combine the code generated by this single-rule compiler to generate more compact code for sets of rules.
 We'll divide up the complete set of rules into subsets based on the main operator (as we did with the `rules-for` function), and generate one big function for each operator.
@@ -2249,23 +2186,19 @@ It is an open question what performance you will get on other problems and on ot
 
 The following table summarizes the execution time and number of function calls on the test data:
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| | original | memo | memo  +  index | memo  +  comp | comp |
-| run time (secs) | 6.6 | 3.0 | .98 | .15 | .05 |
-| speed-up | - | 2 | 7 | 44 | 130 |
-| calls |
-| pat-match | 51690 | 20003 | 5159 | 0 | 0 |
-| variable-p | 37908 | 14694 | 4798 | 0 | 0 |
-| match-variable | 1393 | 551 | 551 | 0 | 0 |
-| simplify | 906 | 408 | 408 | 545 | 906 |
-| simplify-exp | 274 | 118 | 118 | 118 | 274 |
+| []()            |          |       |              |             |      |
+|-----------------|----------|-------|--------------|-------------|------|
+|                 | original | memo  | memo + index | memo + comp | comp |
+| run time (secs) | 6.6      | 3.0   | .98          | .15         | .05  |
+| speed-up        | -        | 2     | 7            | 44          | 130  |
+| calls           |
+| pat-match       | 51690    | 20003 | 5159         | 0           | 0    |
+| variable-p      | 37908    | 14694 | 4798         | 0           | 0    |
+| match-variable  | 1393     | 551   | 551          | 0           | 0    |
+| simplify        | 906      | 408   | 408          | 545         | 906  |
+| simplify-exp    | 274      | 118   | 118          | 118         | 274  |
 
 ## 9.7 History and References
-{:#s0070}
-{:.h1hd}
 
 The idea of memoization was introduced by Donald Michie 1968.
 He proposed using a list of values rather than a hash table, so the savings was not as great.
@@ -2285,8 +2218,6 @@ The idea of eliminating unneeded computation is so attractive that entire langua
 See [Hughes 1985](B9780080571157500285.xhtml#bb0565) or [Field and Harrison 1988](B9780080571157500285.xhtml#bb0400).
 
 ## 9.8 Exercises
-{:#s0075}
-{:.h1hd}
 
 **Exercise  9.3 [d]** In this chapter we presented a compiler for `simplify`.
 It is not too much harder to extend this compiler to handle the full power of `pat-match`.
@@ -2324,16 +2255,14 @@ The player first rolls a 3 and places it in the ones column of the first number,
 On the last roll the player rolls a 6 and ends up with a total of 180.
 Since this is over the limit of 170, the player's final score is 0.
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| roll | 3 | 4 | 6 | 6 | 3 | 5 | 3 | 6 |
-| lst num. | -3 | 43 | 43 | 43 | 43 | 43 | 43 | 43 |
-| 2nd num. | - | - | -6 | -6 | 36 | 36 | 36 | 36 |
-| 3rd num. | - | - | - | -6 | -6 | -6 | 36 | 36 |
-| 4th num. | - | - | - | - | - | -5 | -5 | 65 |
-| total | 03 | 43 | 49 | 55 | 85 | 90 | 120 | 0 |
+| []()     |    |    |    |    |    |    |     |    |
+|----------|----|----|----|----|----|----|-----|----|
+| roll     | 3  | 4  | 6  | 6  | 3  | 5  | 3   | 6  |
+| lst num. | -3 | 43 | 43 | 43 | 43 | 43 | 43  | 43 |
+| 2nd num. | -  | -  | -6 | -6 | 36 | 36 | 36  | 36 |
+| 3rd num. | -  | -  | -  | -6 | -6 | -6 | 36  | 36 |
+| 4th num. | -  | -  | -  | -  | -  | -5 | -5  | 65 |
+| total    | 03 | 43 | 49 | 55 | 85 | 90 | 120 | 0  |
 
 Write a function that allows you to play a game or a series of games.
 The function should take as argument a function representing a strategy for playing the game.
@@ -2349,7 +2278,7 @@ Then describe a countermeasure.
 Unfortunately, there is no read-time equivalent of case.
 Implement one.
 
-**Exercise  9.11 [h]** Write a compiler for ELIZA !!!(span) {:.smallcaps} that compiles all the rules at once into a single function.
+**Exercise  9.11 [h]** Write a compiler for ELIZA that compiles all the rules at once into a single function.
 How much more efficient is the compiled version?
 
 **Exercise  9.12 [d]** Write some rules to simplify Lisp code.
@@ -2384,8 +2313,6 @@ Is this worth it?
 ```
 
 ## 9.9 Answers
-{:#s0080}
-{:.h1hd}
 
 **Answer 9.4** Let *Fn* denote (`fib n`).
 Then the time to compute *Fn*, *Tn*, is a small constant for *n*  &le;  1, and is roughly equal to *Tn-1* plus *Tn-2* for larger *n*.
@@ -2470,8 +2397,8 @@ We take care to elimina te duplicate positions by sorting each set of piles, and
                         collect (sort* (list* i (-  ni) s/n)
                                                       #'>>))))
 (defun sort* (seq pred &key key)
-    "Sort without altering the sequence"
-    (sort (copy-seq seq) pred :key key))
+  "Sort without altering the sequence"
+  (sort (copy-seq seq) pred :key key))
 ```
 
 This time a loss is defined as a position from which you have no moves, or one from which your opponent can force a win no matter what you do.
@@ -2556,9 +2483,9 @@ To guard against this, we can make `roll-die` use a random state that is not acc
 Here's one way to do it:
 
 ```lisp
-(defmacro read-time-case (first-case &rest other-cases)
+  (defmacro read-time-case (first-case &rest other-cases)
     "Do the first case, where normally cases are
-    specified with #+or possibly #- marks."
+    specified with #+ or possibly #- marks."
     (declare (ignore other-cases))
     first-case)
 ```
@@ -2570,19 +2497,17 @@ A fanciful example, resurrecting a number of obsolete Lisps, follows:
     (read-time-case
 ```
 
-!!!(table)
-
-| []() | | | | | | | | | |
-|---|---|---|---|---|---|---|---|---|---|
-| `#+Explorer` | `(time :microsecond-time)` |
-| `#+Franz` | `(sys:time)` |
-| `#+(or PSL UCI)` | `(time)` |
-| `#+YKT` | `(currenttime)` |
-| `#+MTS` | `(status 39)` |
-| `#+Interlisp` | `(clock 1)` |
-| `#+Lispl.5` | `(tempus-fugit)` |
-| `;; otherwise` | |
-| | `(get-internal-real-time)))` |
+| []()             |                              |
+|------------------|------------------------------|
+| `#+Explorer`     | `(time :microsecond-time)`   |
+| `#+Franz`        | `(sys:time)`                 |
+| `#+(or PSL UCI)` | `(time)`                     |
+| `#+YKT`          | `(currenttime)`              |
+| `#+MTS`          | `(status 39)`                |
+| `#+Interlisp`    | `(clock 1)`                  |
+| `#+Lispl.5`      | `(tempus-fugit)`             |
+| `;; otherwise`   |                              |
+|                  | `(get-internal-real-time)))` |
 
 **Answer 9.13** Yes.
 Computing (`head pipe`) may be a trivial computation, but it will be done many times.

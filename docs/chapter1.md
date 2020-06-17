@@ -253,16 +253,16 @@ It turns out that the quote mark is just an abbreviation for another special for
 The expression '*x* is equivalent to `(quote *x*)`, a special form expression that evaluates to *x.*
 The special form operators used in this chapter are:
 
-| []() | |
-|---|---|
-| `defun` | define function |
-| `defparameter` | define special variable |
-| `setf` | set variable or field to new value |
-| `let` | bind local variable(s) |
-| `case` | choose one of several alternatives |
-| `if` | do one thing or another, depending on a test |
-| `function (#')` | refer to a function |
-| `quote (')` | introduce constant data |
+| []()            |                                              |
+|-----------------|----------------------------------------------|
+| `defun`         | define function                              |
+| `defparameter`  | define special variable                      |
+| `setf`          | set variable or field to new value           |
+| `let`           | bind local variable(s)                       |
+| `case`          | choose one of several alternatives           |
+| `if`            | do one thing or another, depending on a test |
+| `function (#')` | refer to a function                          |
+| `quote (')`     | introduce constant data                      |
 
 ## 1.4 Lists
 
@@ -534,8 +534,8 @@ Although all non-nil values are considered true, by convention the constant `t` 
 (defun first-name (name)
   "Select the first name from a name represented as a list."
   (if (member (first name) *titles*)
-  (first-name (rest name))
-  (first name)))
+      (first-name (rest name))
+      (first name)))
 ```
 
 When we map the new `first-name` over the list of names, the results are more encouraging.
@@ -688,7 +688,7 @@ This problem can be solved very easily using `mappend` as a component:
 ```lisp
 (defun numbers-and-negations (input)
   "Given a list, return only the numbers and their negations."
-  (mappend #' number-and-negation input))
+  (mappend #'number-and-negation input))
 
 (defun number-and-negation (x)
   "If x is a number, return a list of x and -x."
@@ -937,10 +937,10 @@ This makes the functional style possible but can lead to errors.
 For example, consider the trivial problem of computing the expression *a* x (b + c), where *a*, *b*, and *c* are numbers.
 The code is trivial in any language; here it is in Pascal and in Lisp:
 
-| []() | |
-|---|---|
-| `/* Pascal */` | `;;; Lisp` |
-| `a * (b + c)` | `(* a (+ b c))` |
+| []()           |                 |
+|----------------|-----------------|
+| `/* Pascal */` | `;;; Lisp`      |
+| `a * (b + c)`  | `(* a (+ b c))` |
 
 The only difference is that Pascal uses infix notation and Lisp uses prefix.
 Now consider computing *a* x (b + c) when *a*, *b*, and *c* are matrices.
@@ -949,26 +949,26 @@ In Lisp the form is exactly the same; only the names of the functions are change
 In Pascal we have the choice of approaches mentioned before.
 We could declare temporary variables to hold intermediate results on the stack, and replace the functional expression with a series of procedure calls:
 
-| []() | |
-|---|---|
-| `/* Pascal */` | `;;; Lisp` |
-| `var temp, result: matrix;` | |
-| `add(b,c,temp);` | `(mult a (add b c))` |
-| `mult(a,temp,result);` | |
-| `return(result);` | |
+| []()                        |                      |
+|-----------------------------|----------------------|
+| `/* Pascal */`              | `;;; Lisp`           |
+| `var temp, result: matrix;` |                      |
+| `add(b,c,temp);`            | `(mult a (add b c))` |
+| `mult(a,temp,result);`      |                      |
+| `return(result);`           |                      |
 
 The other choice is to write Pascal functions that allocate new matrices on the heap.
 Then one can write nice functional expressions like `mult(a,add(b,c))` even in Pascal.
 However, in practice it rarely works this nicely, because of the need to manage storage explicitly:
 
-| []() | |
-|---|---|
-| `/* Pascal */` | `;;; Lisp` |
-| `var a,b,c,x,y: matrix;` | |
-| `x := add(b.c);` | `(mult a (add b c))` |
-| `y := mult(a,x);` | |
-| `free(x);` | |
-| `return(y);` | |
+| []()                     |                      |
+|--------------------------|----------------------|
+| `/* Pascal */`           | `;;; Lisp`           |
+| `var a,b,c,x,y: matrix;` |                      |
+| `x := add(b.c);`         | `(mult a (add b c))` |
+| `y := mult(a,x);`        |                      |
+| `free(x);`               |                      |
+| `return(y);`             |                      |
 
 In general, deciding which structures to free is a difficult task for the Pascal programmer.
 If the programmer misses some, then the program may run out of memory.
@@ -1145,7 +1145,6 @@ Example:
   (cond ((= n 0) 1)
         ((evenp n) (expt (power x (/ n 2)) 2))
         (t (* x (power x (- n 1))))))
-
 ```
 
 ### Answer 1.3
@@ -1159,7 +1158,7 @@ Example:
               (count-atoms (rest exp))))))
 
 (defun count-all-atoms (exp &optional (if-null 1))
-  "Return the total number of atoms in the expression, 
+  "Return the total number of atoms in the expression,
   counting nil as an atom only in non-tail position."
   (cond ((null exp) if-null)
         ((atom exp) 1)
